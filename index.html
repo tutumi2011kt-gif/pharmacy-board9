@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>薬局窓口ダッシュボード（PC&iPad 両対応：click + pointerup）</title>
+<style>
+  :root{--bg:#000;--fg:#fff;--accent:#4ade80;--error:#ef4444;--muted:#9ca3af;--card:#111827;--btn:#1f2937;--good:#22c55e;--gold:#d4af37}
+  [data-theme="light"]{--bg:#fff;--fg:#0f172a;--accent:#2563eb;--error:#b91c1c;--muted:#64748b;--card:#f1f5f9;--btn:#e2e8f0;--good:#16a34a}
+  *{box-sizing:border-box;font-family: ui-rounded, ui-sans-serif, system-ui, -apple-system,"Hiragino Kaku Gothic ProN","Meiryo","Segoe UI",Roboto,"Noto Sans JP",sans-serif}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);-webkit-tap-highlight-color:transparent}
+  .shell{display:grid;grid-template-rows:auto 1fr;height:100vh;max-width:1680px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;padding:6px 12px}
+  header h1{font-size:clamp(16px,1.6vw,22px);margin:0}
+  .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.12);padding:4px 8px;border-radius:999px;background:var(--btn);font-size:12px;color:var(--muted)}
+  .layout{display:grid;grid-template-columns:300px 1fr;gap:10px;padding:6px 10px 10px}
+  @media (max-width:1100px){.layout{grid-template-columns:1fr}}
+  #sidebar{display:flex;flex-direction:column;gap:8px}
+  .card{background:var(--card);border-radius:14px;padding:10px;border:1px solid rgba(255,255,255,0.06)}
+  .card h2{font-size:13px;margin:0 0 6px 0;color:var(--muted)}
+  label{display:block;font-size:12px;margin:4px 0 2px 0;color:var(--muted)}
+  input[type="text"],input[type="number"],input[type="range"]{width:100%;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:transparent;color:var(--fg);font-size:16px;letter-spacing:.06em}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .btn{background:var(--btn);border:1px solid rgba(255,255,255,.12);color:var(--fg);padding:10px 14px;border-radius:12px;cursor:pointer;font-weight:700;font-size:14px;touch-action:manipulation}
+  .btn.primary{background:var(--accent);color:#000;border:none}
+  .btn.good{background:var(--good);color:#fff;border:none}
+  .btn.danger{background:var(--error);color:#fff;border:none}
+  .btn:disabled{opacity:.6;cursor:not-allowed}
+  .seg{display:flex;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,.12)}
+  .seg button{flex:1;padding:10px 12px;background:transparent;border:none;color:var(--fg);cursor:pointer;font-size:14px;touch-action:manipulation}
+  .seg button.active{background:var(--btn);font-weight:700;outline:2px solid var(--accent)}
+  .error{color:var(--error);font-weight:700;font-size:12px;min-height:1.2em}
+  .help{font-size:11px;color:var(--muted)}
+  #center{display:flex;flex-direction:column;gap:clamp(8px,2.2vw,20px);align-items:stretch;justify-content:flex-start;min-height:0}
+  .panel{background:transparent;padding:4px 8px}
+  .headline{font-size:clamp(18px,2.2vw,28px);font-weight:800;letter-spacing:.02em;margin:0 0 4px 0;text-align:left;padding-left:6px;color:var(--muted)}
+  .patient-row{display:grid;grid-template-columns:repeat(3,minmax(200px,1fr));gap:clamp(8px,1.4vw,16px)}
+  @media (max-width:1200px){.patient-row{grid-template-columns:repeat(2,minmax(200px,1fr))}}
+  @media (max-width:750px){.patient-row{grid-template-columns:1fr}}
+  .patient-card{position:relative;background:var(--card);border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:10px 12px;min-height:120px;text-align:center;outline:none;color:var(--fg)}
+  .patient-card:focus{outline:2px solid var(--accent)}
+  .delbtn{position:absolute;top:6px;right:6px;width:32px;height:32px;border-radius:999px;border:1px solid rgba(255,255,255,.15);background:var(--btn);color:var(--fg);font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+  .big-number{font-variant-numeric:tabular-nums lining-nums;line-height:1;font-weight:900;letter-spacing:.06em;font-size:clamp(64px,9vw,160px);text-shadow:0 2px 0 rgba(0,0,0,.2)}
+  .sub-number{font-size:clamp(24px,4.6vw,72px);font-weight:800;font-variant-numeric:tabular-nums;line-height:1.05}
+  .card-number{font-size:clamp(20px,3.6vw,44px);font-weight:900;letter-spacing:.04em;margin-top:4px;line-height:1.05}
+  .meta{font-size:clamp(14px,2.2vw,22px);color:var(--muted)}
+  .flash10{animation:pulseTen 1s ease-in-out 10,glowTen 1s ease-in-out 10,colorSwap 1s steps(1,end) 10;will-change:transform,opacity,box-shadow,color}
+  @keyframes pulseTen{0%{transform:scale(1);opacity:1}50%{transform:scale(1.18);opacity:.75}100%{transform:scale(1);opacity:1}}
+  @keyframes glowTen{0%{box-shadow:0 0 0 rgba(255,255,255,0)}50%{box-shadow:0 0 28px rgba(255,255,255,.30)}100%{box-shadow:0 0 0 rgba(255,255,255,0)}}
+  @keyframes colorSwap{0%{color:#fff}100%{color:var(--gold)}}
+</style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <h1 id="title">薬局窓口ダッシュボード</h1>
+      <div class="row">
+        <span class="pill"><span id="today"></span></span>
+        <span class="pill"><span id="now"></span></span>
+        <button id="btnUnlock" class="btn primary" title="iPadで音を有効化">音を有効化</button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <aside id="sidebar">
+        <div class="card">
+          <h2>外来番号（急ぎ）</h2>
+          <label for="inNum">番号 1〜3桁</label>
+          <input id="inNum" type="text" inputmode="numeric" maxlength="3" placeholder="---" />
+          <div class="row" style="margin-top:6px;">
+            <button id="btnNumConfirm" class="btn primary">追加</button>
+            <button id="btnNumClear" class="btn">全クリア</button>
+          </div>
+          <div id="errNum" class="error"></div>
+          <div class="help">最大3件まで横並び表示。4件目は古いものから消えます。</div>
+        </div>
+
+        <div class="card">
+          <h2>レナリドミド</h2>
+          <label for="inLenCount">残数（0〜10）</label>
+          <input id="inLenCount" type="number" min="0" max="10" step="1" placeholder="例: 4" />
+          <label for="inLenNum">外来番号 1〜3桁</label>
+          <input id="inLenNum" type="text" inputmode="numeric" maxlength="3" placeholder="---" />
+          <div class="row" style="margin-top:6px;">
+            <button id="btnLenConfirm" class="btn good">追加/更新</button>
+            <button id="btnLenClear" class="btn">全クリア</button>
+          </div>
+          <div id="errLen" class="error"></div>
+          <div class="help">同じ外来番号は上書き更新。最大3件まで表示。</div>
+        </div>
+
+        <div class="card">
+          <h2>注射用水</h2>
+          <label>受け渡し</label>
+          <div class="seg" role="group" aria-label="受け渡し場所">
+            <button id="inInjUp">上で渡す</button>
+            <button id="inInjDown">下で渡す</button>
+          </div>
+          <label for="inInjNum">外来番号 1〜3桁</label>
+          <input id="inInjNum" type="text" inputmode="numeric" maxlength="3" placeholder="---" />
+          <div class="row" style="margin-top:6px;">
+            <button id="btnInjConfirm" class="btn good">追加/更新</button>
+            <button id="btnInjClear" class="btn">全クリア</button>
+          </div>
+          <div id="errInj" class="error"></div>
+          <div class="help">同じ外来番号は上書き更新。最大3件まで表示。</div>
+        </div>
+
+        <div class="card">
+          <h2>設定</h2>
+          <div class="row">
+            <span class="help">テーマ</span>
+            <div class="seg">
+              <button class="tog" data-key="theme" data-val="dark">黒</button>
+              <button class="tog" data-key="theme" data-val="light">白</button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="help">サイズ</span>
+            <div class="seg">
+              <button class="tog" data-key="fontScale" data-val="large">大</button>
+              <button class="tog" data-key="fontScale" data-val="xlarge">特大</button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="help">ゼロ埋め</span>
+            <div class="seg">
+              <button class="tog" data-key="autoPad" data-val="true">ON</button>
+              <button class="tog" data-key="autoPad" data-val="false">OFF</button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="help">音</span>
+            <div class="seg">
+              <button class="tog" data-key="soundType" data-val="beep">ビープ</button>
+              <button class="tog" data-key="soundType" data-val="chime">チャイム</button>
+              <button class="tog" data-key="soundType" data-val="school">長チャイム(約10秒)</button>
+              <button class="tog" data-key="soundType" data-val="mute">ミュート</button>
+            </div>
+            <button id="btnTestSound" class="btn">試聴</button>
+          </div>
+          <div class="row" style="width:100%">
+            <label for="vol" style="flex:1">音量</label>
+            <input id="vol" type="range" min="0" max="100" step="1" style="flex:1" />
+            <span class="help">※iPad/PCの本体音量も最大に</span>
+          </div>
+          <div class="row">
+            <span class="help">同一値の連続確定</span>
+            <div class="seg">
+              <button class="tog" data-key="soundOnRepeat" data-val="true">音あり</button>
+              <button class="tog" data-key="soundOnRepeat" data-val="false">音なし</button>
+            </div>
+          </div>
+          <div class="row">
+            <span class="help">クリア時の音</span>
+            <div class="seg">
+              <button class="tog" data-key="soundOnClear" data-val="true">音あり</button>
+              <button class="tog" data-key="soundOnClear" data-val="false">音なし</button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main id="center">
+        <section class="panel" id="panel-urgent">
+          <div class="headline">急ぎの外来番号</div>
+          <div id="rowUrgent" class="patient-row" aria-live="polite"></div>
+        </section>
+        <section class="panel" id="panel-len">
+          <div class="headline">レナリドミド</div>
+          <div id="rowLen" class="patient-row" aria-live="polite"></div>
+        </section>
+        <section class="panel" id="panel-inj">
+          <div class="headline">注射用水</div>
+          <div id="rowInj" class="patient-row" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+<script>
+/* ===== State & utils ===== */
+var APP_CONFIG={title:"薬局窓口ダッシュボード",defaultTheme:"dark",defaultFontScale:"xlarge",defaultSoundType:"school",defaultVolume:100,autoPad:true,soundOnRepeat:false,soundOnClear:false,lenalidomide:{max:10},maxSlots:3};
+var LS_KEY="pharmacyBoardV4_2";
+function todayStr(){var dt=new Date();return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0")}
+function loadState(){try{return JSON.parse(localStorage.getItem(LS_KEY))||{}}catch(e){return{}}}
+function saveState(s){localStorage.setItem(LS_KEY,JSON.stringify(s))}
+function ensureState(){var s=loadState();var t=todayStr();if(s.date!==t){return{date:t,settings:{theme:APP_CONFIG.defaultTheme,fontScale:APP_CONFIG.defaultFontScale,soundType:APP_CONFIG.defaultSoundType,volume:APP_CONFIG.defaultVolume,autoPad:APP_CONFIG.autoPad,soundOnRepeat:APP_CONFIG.soundOnRepeat,soundOnClear:APP_CONFIG.soundOnClear},urgentNumbers:[],lenPatients:[],injPatients:[]}}if(!s.settings)s.settings={};var d={theme:APP_CONFIG.defaultTheme,fontScale:APP_CONFIG.defaultFontScale,soundType:APP_CONFIG.defaultSoundType,volume:APP_CONFIG.defaultVolume,autoPad:APP_CONFIG.autoPad,soundOnRepeat:APP_CONFIG.soundOnRepeat,soundOnClear:APP_CONFIG.soundOnClear};for(var k in d){if(typeof s.settings[k]==="undefined")s.settings[k]=d[k]}if(!Array.isArray(s.urgentNumbers))s.urgentNumbers=[];if(!Array.isArray(s.lenPatients))s.lenPatients=[];if(!Array.isArray(s.injPatients))s.injPatients=[];s.date=t;return s}
+var STATE=ensureState();saveState(STATE);
+function $(q){return document.querySelector(q)}function $$(q){return document.querySelectorAll(q)}
+
+/* ===== Refs ===== */
+var inNum=$("#inNum"),btnNumConfirm=$("#btnNumConfirm"),btnNumClear=$("#btnNumClear"),errNum=$("#errNum");
+var inLenCount=$("#inLenCount"),inLenNum=$("#inLenNum"),btnLenConfirm=$("#btnLenConfirm"),btnLenClear=$("#btnLenClear"),errLen=$("#errLen");
+var inInjUp=$("#inInjUp"),inInjDown=$("#inInjDown"),inInjNum=$("#inInjNum"),btnInjConfirm=$("#btnInjConfirm"),btnInjClear=$("#btnInjClear"),errInj=$("#errInj");
+var rowUrgent=$("#rowUrgent"),rowLen=$("#rowLen"),rowInj=$("#rowInj");
+var btnUnlock=$("#btnUnlock"),btnTestSound=$("#btnTestSound");
+
+function updateClock(){var dt=new Date();$("#today").textContent=dt.getFullYear()+"/"+String(dt.getMonth()+1).padStart(2,"0")+"/"+String(dt.getDate()).padStart(2,"0");$("#now").textContent=String(dt.getHours()).padStart(2,"0")+":"+String(dt.getMinutes()).padStart(2,"0")}
+updateClock();setInterval(updateClock,60*1000);
+
+/* ===== Dual-event helper (click + pointerup) with debounce ===== */
+var __lastAction={key:"",at:0};
+function shouldRun(key){
+  var now=(window.performance&&performance.now)?performance.now():Date.now();
+  if(__lastAction.key===key && (now-__lastAction.at)<300){return false}
+  __lastAction.key=key; __lastAction.at=now; return true;
+}
+function addDual(el, key, fn){
+  if(!el) return;
+  el.addEventListener("click", function(e){
+    if(!shouldRun(key)) return;
+    fn(e);
+  });
+  el.addEventListener("pointerup", function(e){
+    // touch/penのみ。マウスはclickに任せる
+    if(e && e.pointerType==="mouse") return;
+    if(!shouldRun(key)) return;
+    fn(e);
+  }, {passive:true});
+}
+
+/* ===== Audio (unlock + compressor) ===== */
+var audioCtx=null,masterGain=null,comp=null;
+function initAudio(){try{if(!audioCtx){var Ctx=window.AudioContext||window.webkitAudioContext;audioCtx=new Ctx();masterGain=audioCtx.createGain();masterGain.gain.value=(STATE.settings.volume||100)/100;comp=audioCtx.createDynamicsCompressor();comp.threshold.setValueAtTime(-24,audioCtx.currentTime);comp.knee.setValueAtTime(30,audioCtx.currentTime);comp.ratio.setValueAtTime(12,audioCtx.currentTime);comp.attack.setValueAtTime(0.003,audioCtx.currentTime);comp.release.setValueAtTime(0.250,audioCtx.currentTime);comp.connect(masterGain);masterGain.connect(audioCtx.destination);playBeep(0.07,900)}else if(audioCtx.state==="suspended"){audioCtx.resume()}btnUnlock.style.display="none"}catch(e){console.warn("Audio init failed:",e)}}
+function setVolumeFromSlider(v){if(masterGain){masterGain.gain.value=Math.max(0,Math.min(1,v/100))}STATE.settings.volume=v;saveState(STATE)}
+function makeEnvGain(t0,dur,peak){var g=audioCtx.createGain();g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(peak||1.0,t0+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);return g}
+function osc(freq,type){var o=audioCtx.createOscillator();o.type=type||"sine";o.frequency.value=freq;return o}
+function outNode(){return comp||masterGain||audioCtx.destination}
+function playBeep(sec,freq){if(!audioCtx||STATE.settings.soundType==="mute")return;var o=osc(freq||880,"square");var g=audioCtx.createGain();g.gain.setValueAtTime(1.0,audioCtx.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,audioCtx.currentTime+sec);o.connect(g);g.connect(outNode());o.start();o.stop(audioCtx.currentTime+sec)}
+function playChime(){if(!audioCtx||STATE.settings.soundType==="mute")return;playTone(783.99,0.12,0);playTone(1046.5,0.18,0.12)}
+function playTone(freq,sec,delay){var o=osc(freq,"sine");var t0=audioCtx.currentTime+(delay||0);var g=makeEnvGain(t0,sec,1.0);o.connect(g);g.connect(outNode());o.start(t0);o.stop(t0+sec)}
+function playSchoolChimeLong(){if(!audioCtx||STATE.settings.soundType==="mute")return;var t=audioCtx.currentTime;var seq=[{f:784,d:0.30,dl:0.00,type:"triangle"},{f:659,d:0.30,dl:0.32,type:"triangle"},{f:880,d:0.30,dl:0.64,type:"triangle"},{f:659,d:0.60,dl:0.96,type:"triangle"}];var repeats=6;for(var r=0;r<repeats;r++){for(var i=0;i<seq.length;i++){var s=seq[i];var o=osc(s.f,s.type);var g=makeEnvGain(t+s.dl,s.d,1.2);var o2=osc(s.f*1.0035,"triangle");var g2=makeEnvGain(t+s.dl,s.d,0.8);o.connect(g);g.connect(outNode());o2.connect(g2);g2.connect(outNode());o.start(t+s.dl);o.stop(t+s.dl+s.d);o2.start(t+s.dl);o2.stop(t+s.dl+s.d)}t+=1.6}}
+function playNotify(){if(STATE.settings.soundType==="beep")playBeep(0.12,880);else if(STATE.settings.soundType==="chime")playChime();else if(STATE.settings.soundType==="school")playSchoolChimeLong()}
+addDual(btnUnlock, "unlock", function(){initAudio()});
+document.addEventListener("pointerdown",function once(){initAudio();document.removeEventListener("pointerdown",once)},{passive:true});
+
+/* ===== Helpers ===== */
+function normalizeNumber(raw,opt){opt=opt||{};var autoPad=(typeof opt.autoPad==="boolean")?opt.autoPad:true;var v=String(raw||"").replace(/[^\d]/g,"").slice(0,3);if(autoPad&&v.length>0)v=v.padStart(3,"0");return v.length?v:null}
+function validateDigits(s,min,max){min=(min||1);max=(max||3);var m=String(s||"").match(/^\d+$/);if(!m)return false;return s.length>=min&&s.length<=max}
+
+/* ===== Flash ===== */
+var flashTimers=new WeakMap();
+function flashCard(el){if(!el)return;var prev=flashTimers.get(el);if(prev)clearTimeout(prev);el.classList.remove("flash10");void el.offsetWidth;el.classList.add("flash10");var t=setTimeout(function(){el.classList.remove("flash10")},10000);flashTimers.set(el,t)}
+
+/* ===== Renderers ===== */
+function renderRow(container,items,builder){container.innerHTML="";if(!items||items.length===0){var empty=document.createElement("div");empty.className="patient-card";empty.innerHTML='<div class="meta">—</div>';container.appendChild(empty);return}items.forEach(function(it,idx){container.appendChild(builder(it,idx))})}
+function buildUrgentCard(num,idx){var div=document.createElement("div");div.className="patient-card";div.dataset.number=num;div.tabIndex=0;var del=document.createElement("button");del.className="delbtn";del.setAttribute("aria-label","外来番号 "+num+" を削除");del.textContent="×";addDual(del,"delUrgent:"+idx,function(){deleteUrgentAt(idx)});var span=document.createElement("div");span.className="big-number";span.textContent=num;div.appendChild(del);div.appendChild(span);div.addEventListener("keydown",function(e){if(e.key==="Delete"||e.key==="Backspace"){deleteUrgentAt(idx)}});return div}
+function buildLenCard(p){var div=document.createElement("div");div.className="patient-card";div.dataset.number=p.number;div.tabIndex=0;var del=document.createElement("button");del.className="delbtn";del.setAttribute("aria-label","レナリドミド 外来番号 "+p.number+" を削除");del.textContent="×";addDual(del,"delLen:"+p.number,function(){deleteLenByNumber(p.number)});var count=document.createElement("div");count.className="sub-number";count.textContent="残："+p.count+"錠";var number=document.createElement("div");number.className="card-number";number.textContent="外来番号 "+p.number;div.appendChild(del);div.appendChild(count);div.appendChild(number);div.addEventListener("keydown",function(e){if(e.key==="Delete"||e.key==="Backspace"){deleteLenByNumber(p.number)}});return div}
+function buildInjCard(p){var div=document.createElement("div");div.className="patient-card";div.dataset.number=p.number;div.tabIndex=0;var del=document.createElement("button");del.className="delbtn";del.setAttribute("aria-label","注射用水 外来番号 "+p.number+" を削除");del.textContent="×";addDual(del,"delInj:"+p.number,function(){deleteInjByNumber(p.number)});var place=document.createElement("div");place.className="sub-number";place.textContent=(p.place==="up")?"上で渡す":"下で渡す";var number=document.createElement("div");number.className="card-number";number.textContent="外来番号 "+p.number;div.appendChild(del);div.appendChild(place);div.appendChild(number);div.addEventListener("keydown",function(e){if(e.key==="Delete"||e.key==="Backspace"){deleteInjByNumber(p.number)}});return div}
+function renderCenter(opt){opt=opt||{};renderRow(rowUrgent,STATE.urgentNumbers,function(n,i){return buildUrgentCard(n,i)});renderRow(rowLen,STATE.lenPatients,function(p,i){return buildLenCard(p,i)});renderRow(rowInj,STATE.injPatients,function(p,i){return buildInjCard(p,i)});if(opt.flashUrgent){var last=rowUrgent.querySelector('.patient-card:last-child');flashCard(last)}if(opt.flashLenNum){var el1=Array.prototype.slice.call(rowLen.querySelectorAll('.patient-card')).find(function(x){return x.dataset.number===opt.flashLenNum});flashCard(el1)}if(opt.flashInjNum){var el2=Array.prototype.slice.call(rowInj.querySelectorAll('.patient-card')).find(function(x){return x.dataset.number===opt.flashInjNum});flashCard(el2)}}
+
+/* ===== Mutations ===== */
+function pushWithCap(arr,val,cap){arr.push(val);while(arr.length>cap)arr.shift()}
+function setUrgentNumber(raw){var val=String(raw||"").trim();if(!validateDigits(val,1,3)){errNum.textContent="1〜3桁の数字を入力してください。";return}errNum.textContent="";var norm=STATE.settings.autoPad?val.padStart(3,"0"):val;pushWithCap(STATE.urgentNumbers,norm,APP_CONFIG.maxSlots);saveState(STATE);renderCenter({flashUrgent:true});playNotify()}
+function clearUrgent(){STATE.urgentNumbers=[];saveState(STATE);renderCenter();if(STATE.settings.soundOnClear)playNotify()}
+function setLenPatient(obj){var cStr=String((obj&&obj.count)||"").trim();var nStr=String((obj&&obj.number)||"").trim();var c=Number(cStr);if(!/^\d+$/.test(cStr)||c<0||c>APP_CONFIG.lenalidomide.max){errLen.textContent="残数は0〜"+APP_CONFIG.lenalidomide.max+"の整数で入力してください。";return}if(!validateDigits(nStr,1,3)){errLen.textContent="外来番号は1〜3桁の数字で入力してください。";return}errLen.textContent="";var normNum=normalizeNumber(nStr,{autoPad:STATE.settings.autoPad});var idx=STATE.lenPatients.findIndex(function(p){return p.number===normNum});if(idx>=0){STATE.lenPatients[idx]={count:String(c),number:normNum}}else{pushWithCap(STATE.lenPatients,{count:String(c),number:normNum},APP_CONFIG.maxSlots)}saveState(STATE);renderCenter({flashLenNum:normNum});playNotify()}
+function clearLen(){STATE.lenPatients=[];saveState(STATE);renderCenter();if(STATE.settings.soundOnClear)playNotify()}
+function setInjPatient(obj){var place=obj&&obj.place;var number=obj&&obj.number;if(place!=="up"&&place!=="down"){errInj.textContent="「上」か「下」を選択してください。";return}if(!validateDigits(String(number||""),1,3)){errInj.textContent="外来番号は1〜3桁の数字で入力してください。";return}errInj.textContent="";var normNum=normalizeNumber(number,{autoPad:STATE.settings.autoPad});var idx=STATE.injPatients.findIndex(function(p){return p.number===normNum});if(idx>=0){STATE.injPatients[idx]={place:place,number:normNum}}else{pushWithCap(STATE.injPatients,{place:place,number:normNum},APP_CONFIG.maxSlots)}saveState(STATE);renderCenter({flashInjNum:normNum});playNotify()}
+
+/* ===== Delete ===== */
+function deleteUrgentAt(index){if(index<0||index>=STATE.urgentNumbers.length)return;STATE.urgentNumbers.splice(index,1);saveState(STATE);renderCenter()}
+function deleteLenByNumber(number){STATE.lenPatients=STATE.lenPatients.filter(function(p){return p.number!==number});saveState(STATE);renderCenter()}
+function deleteInjByNumber(number){STATE.injPatients=STATE.injPatients.filter(function(p){return p.number!==number});saveState(STATE);renderCenter()}
+
+/* ===== Events (dual) ===== */
+addDual(btnNumConfirm,"urgent:add",function(){setUrgentNumber(inNum.value)});
+addDual(btnNumClear,"urgent:clear",function(){clearUrgent()});
+inNum.addEventListener("keydown",function(e){if(e.key==="Enter"){setUrgentNumber(inNum.value)}else if(e.key==="Escape"){inNum.value=""}});
+inNum.addEventListener("input",function(){inNum.value=inNum.value.replace(/[^\d]/g,"").slice(0,3);errNum.textContent=""});
+
+addDual(btnLenConfirm,"len:add",function(){setLenPatient({count:inLenCount.value,number:inLenNum.value})});
+addDual(btnLenClear,"len:clear",function(){clearLen()});
+[inLenCount,inLenNum].forEach(function(el){el.addEventListener("keydown",function(e){if(e.key==="Enter"){setLenPatient({count:inLenCount.value,number:inLenNum.value})}else if(e.key==="Escape"){el.value=""}})});
+inLenCount.addEventListener("input",function(){errLen.textContent=""});
+inLenNum.addEventListener("input",function(){inLenNum.value=inLenNum.value.replace(/[^\d]/g,"").slice(0,3);errLen.textContent=""});
+
+var tempPlace="";
+function setPlace(which){tempPlace=which;if(which==="up"){inInjUp.classList.add("active");inInjDown.classList.remove("active")}else{inInjDown.classList.add("active");inInjUp.classList.remove("active")}}
+addDual(inInjUp,"inj:placeUp",function(){setPlace("up")});
+addDual(inInjDown,"inj:placeDown",function(){setPlace("down")});
+addDual(btnInjConfirm,"inj:add",function(){setInjPatient({place:tempPlace,number:inInjNum.value})});
+addDual(btnInjClear,"inj:clear",function(){clearInj()});
+inInjNum.addEventListener("keydown",function(e){if(e.key==="Enter"){setInjPatient({place:tempPlace,number:inInjNum.value})}else if(e.key==="Escape"){inInjNum.value=""}});
+inInjNum.addEventListener("input",function(){inInjNum.value=inInjNum.value.replace(/[^\d]/g,"").slice(0,3);errInj.textContent=""});
+
+/* 設定トグル＆試聴 */
+Array.prototype.forEach.call($$(".tog"), function(b){
+  addDual(b, "tog:"+b.dataset.key+":"+b.dataset.val, function(){
+    var k=b.dataset.key; var v=b.dataset.val;
+    if(v==="true") STATE.settings[k]=true;
+    else if(v==="false") STATE.settings[k]=false;
+    else STATE.settings[k]=v;
+    saveState(STATE); applySettings();
+  });
+});
+addDual(btnTestSound,"sound:test",function(){playNotify()});
+
+var vol=$("#vol");vol.value=STATE.settings.volume||100;
+vol.addEventListener("input",function(){setVolumeFromSlider(Number(vol.value||100))});
+
+function applySettings(){document.documentElement.setAttribute("data-theme",STATE.settings.theme);document.body.dataset.font=STATE.settings.fontScale}
+applySettings();renderCenter();setTimeout(function(){try{inNum.focus()}catch(e){}},120);
+</script>
+</body>
+</html>
